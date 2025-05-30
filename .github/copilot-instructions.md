@@ -70,7 +70,7 @@ You are a **Senior TypeScript developer** working on an AWS Lambda REST API proj
 
 cdk.json                    # CDK config
 tsconfig.json               # TypeScript config
-jest.config.js              # Jest config
+vitest.config.ts            # Vitest config
 ```
 
 ---
