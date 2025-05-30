@@ -4,9 +4,16 @@ A starter kit for creating AWS Lambda microservices with GitHub Copilot for AI a
 
 ## Getting started
 
-Begin by reviewing and updating the [Copilot Instructions](.github/copilot-instructions.md) to suit the needs and preferences for your React project.
+Begin by reviewing and updating the [Copilot Instructions](.github/copilot-instructions.md) to suit the needs and preferences for your project.
 
-Interact with Copilot using your favorite editor to create your application. We strongly recommend [VS Code][vscode].
+Interact with Copilot using your favorite editor to create your application. We strongly recommend [VS Code][vscode] with the following extensions:
+
+- GitHub Copilot
+- GitHub Copilot Chat
+- Prettier - Code formatter
+- ESLint
+- Vitest
+- indent-rainbow
 
 ## Additional reading
 

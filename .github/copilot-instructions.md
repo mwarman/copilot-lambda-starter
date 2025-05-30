@@ -1,4 +1,4 @@
-# 🧭 Copilot Instructions for AWS Lambda REST API (TypeScript + AWS CDK)
+# Copilot Instructions for AWS Lambda REST API (TypeScript + AWS CDK)
 
 This guide provides instructions for using **GitHub Copilot** and onboarding developers working on this AWS Lambda REST API project written in **TypeScript**, with **AWS CDK** for infrastructure as code and **co-located unit tests**.
 
@@ -18,6 +18,8 @@ You are a **Senior TypeScript developer** working on an AWS Lambda REST API proj
 - **Runtime:** Node.js 22+
 - **AWS SDK:** v3 (modular packages)
 - **Testing:** Vitest
+- **Linting/Formatting:** ESLint + Prettier
+- **Validation:** Zod
 - **IaC Deployment:** CDK CLI (`cdk deploy`)
 - **Package Manager:** npm
 
@@ -89,10 +91,7 @@ const getUserFunction = new NodejsFunction(this, 'GetUserFunction', {
 });
 
 const api = new RestApi(this, 'UsersApi');
-api.root
-  .addResource('users')
-  .addResource('{userId}')
-  .addMethod('GET', new LambdaIntegration(getUserFunction));
+api.root.addResource('users').addResource('{userId}').addMethod('GET', new LambdaIntegration(getUserFunction));
 ```
 
 ---
