@@ -22,3 +22,37 @@ The [official guide for GitHub Copilot in VS Code][vscode-copilot-docs] provides
 The VS Code YouTube channel has a playlist with many interesting videos and tutorials for [GitHub Copilot in VS Code](https://youtube.com/playlist?list=PLj6YeMhvp2S7rQaCLRrMnzRdkNdKnMVwg&si=KIRHyFKYyMcUssQ3).
 
 This official [tips and tricks guide](https://code.visualstudio.com/docs/copilot/copilot-tips-and-tricks) from VS Code provides an excellent summary of Copilot best practices.
+
+## Project structure
+
+The project structure follows the best practices for Copilot assistance. This project is ready to begin iterative development with a Copilot AI agent.
+
+Note that the application component does not exist, not yet anyway. This base project structure is primed for building an AWS Lambda component from the very beginning using Copilot agent mode with you in the driver's seat.
+
+```
+/.github
+  copilot-instructions.md   # Copilot instructions
+
+.editorconfig               # Editor configuration
+.prettierrc                 # Prettier configuration
+.gitignore                  # Git ignore
+LICENSE                     # Software license
+README.md                   # This document
+```
+
+## How to use
+
+### Update the instructions
+
+Add a section to the [Copilot Instructions](./.github/copilot-instructions.md) document immediately following the **Role** section. Provide an overview of the project like this:
+
+```md
+---
+
+## Project Overview
+
+- **Component:** Task Service **task-service**
+- **Description:** This service provides a REST API for managing tasks, including creating, retrieving, updating, and deleting tasks. It uses AWS Lambda functions triggered by API Gateway events, with business logic encapsulated in service classes. The project follows best practices for TypeScript development, AWS CDK infrastructure management, and unit testing with Vitest.
+
+---
+```
