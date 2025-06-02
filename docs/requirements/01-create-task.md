@@ -24,7 +24,7 @@ A **Task** object has the following attributes:
 - **title:** The task title. String. Required. Maximum of 100 characters.
 - **detail:** Additional information for the task. String. Optional. Maximum of 2000 characters.
 - **isComplete:** Indicates if the task is complete. Boolean. Optional. Defaults to **false** if not provided.
-- **dueAt:** The task due date. String. Optioanl. Use ISO-8601 date format.
+- **dueAt:** The task due date. String. Optioanl. Use ISO-8601 date format, YYYY-MM-DD.
 
 ### Create Task Object
 

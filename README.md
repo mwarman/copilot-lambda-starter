@@ -56,3 +56,16 @@ Add a section to the [Copilot Instructions](./.github/copilot-instructions.md) d
 
 ---
 ```
+
+## Configuration
+
+The Task Service uses a centralized configuration system based on Zod validation to ensure all environment variables are properly validated and typed. This approach helps catch configuration errors early and provides TypeScript type safety for all configuration values.
+
+### Key Features
+
+- **Validation**: All environment variables are validated using Zod schemas
+- **Type Safety**: TypeScript types are automatically derived from the validation schemas
+- **Default Values**: Optional environment variables have sensible defaults
+- **Environment-Specific Config**: Helper for environment-specific configuration
+
+For more details, see the [Configuration Documentation](docs/configuration.md).

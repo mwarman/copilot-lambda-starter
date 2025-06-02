@@ -132,12 +132,56 @@ export const getTask = async (event: APIGatewayProxyEvent): Promise<APIGatewayPr
 
   try {
     // Call service to get task
-    const task = await taskService.getTaskById(taskId);
+    const task = await TaskService.getTaskById(taskId);
     return task ? ok(task) : notFound('Task not found');
   } catch (err) {
     console.error('Failed to get task:', err);
     return internalServerError('Unexpected error');
   }
+};
+```
+
+### Service Format Example
+
+```ts
+import { PutCommand } from '@aws-sdk/lib-dynamodb';
+import { v4 as uuidv4 } from 'uuid';
+import { Task, CreateTaskRequest } from '@/models/Task.js';
+import { dynamoDocClient } from '@/utils/awsClients.js';
+import { logger } from '@/utils/logger.js';
+import { config } from '@/utils/config.js';
+
+// Service function to create a new task
+const createTask = async (createTaskRequest: CreateTaskRequest): Promise<Task> => {
+  // Generate a new ID
+  const taskId = uuidv4();
+
+  // Create the complete task object
+  const task: Task = {
+    id: taskId,
+    title: createTaskRequest.title,
+    detail: createTaskRequest.detail,
+    isComplete: createTaskRequest.isComplete ?? false,
+    dueAt: createTaskRequest.dueAt,
+  };
+
+  // Log the task creation
+  logger.info(`Creating task with ID: ${taskId}`, { task });
+
+  // Save to DynamoDB
+  await dynamoDocClient.send(
+    new PutCommand({
+      TableName: config.TASKS_TABLE,
+      Item: task,
+    }),
+  );
+
+  return task;
+};
+
+// Define and export the TaskService with the methods to handle task operations
+export const TaskService = {
+  createTask,
 };
 ```
 
