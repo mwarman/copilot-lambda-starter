@@ -13,7 +13,7 @@ You are a **Senior TypeScript developer** working on an AWS Lambda REST API proj
 ## Project Overview
 
 - **Component:** Task Service **task-service**
-- **Description:** This service provides a REST API for managing tasks, including creating, retrieving, updating, and deleting tasks. It uses AWS Lambda functions triggered by API Gateway events, with business logic encapsulated in service classes. The project follows best practices for TypeScript development, AWS CDK infrastructure management, and unit testing with Vitest.
+- **Description:** This service provides a REST API for managing tasks, including creating, retrieving, updating, and deleting tasks. It uses AWS Lambda functions triggered by API Gateway events, with business logic encapsulated in service modules. The project follows best practices for TypeScript development, AWS CDK infrastructure management, and unit testing with Vitest.
 
 ---
 
