@@ -2,7 +2,7 @@
  * The TaskService module provides functionality to operate on tasks in DynamoDB.
  * It includes methods to handle task creation, validation, and interaction with AWS services.
  */
-import { PutCommand } from '@aws-sdk/lib-dynamodb';
+import { PutCommand, ScanCommand } from '@aws-sdk/lib-dynamodb';
 import { v4 as uuidv4 } from 'uuid';
 import { Task, CreateTaskRequest } from '@/models/Task.js';
 import { dynamoDocClient } from '@/utils/awsClients.js';
@@ -46,7 +46,32 @@ const createTask = async (createTaskRequest: CreateTaskRequest): Promise<Task> =
   return task;
 };
 
+/**
+ * Lists all tasks from DynamoDB
+ *
+ * @returns Array of Task objects
+ */
+const listTasks = async (): Promise<Task[]> => {
+  logger.debug('Listing all tasks from DynamoDB', {
+    tableName: config.TASKS_TABLE,
+  });
+
+  // Scan the DynamoDB table to get all tasks
+  const response = await dynamoDocClient.send(
+    new ScanCommand({
+      TableName: config.TASKS_TABLE,
+    }),
+  );
+
+  // Convert the Items to Task objects
+  const tasks = response.Items as Task[];
+
+  logger.info('Retrieved all tasks successfully', { count: tasks.length });
+  return tasks;
+};
+
 // Define and export the TaskService with the methods to handle task operations
 export const TaskService = {
   createTask,
+  listTasks,
 };

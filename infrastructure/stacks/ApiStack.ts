@@ -41,8 +41,32 @@ export class ApiStack extends cdk.Stack {
       timeout: cdk.Duration.seconds(6),
     });
 
-    // Grant the Lambda function permissions to write to the DynamoDB table
+    // Create and configure CloudWatch Log Group for the list tasks Lambda function
+    const listTasksFunctionLogGroup = new logs.LogGroup(this, 'ListTasksFunctionLogGroup', {
+      retention: logs.RetentionDays.ONE_WEEK,
+      removalPolicy: cdk.RemovalPolicy.DESTROY,
+    });
+
+    // Create Lambda function for listing tasks
+    const listTasksFunction = new lambdaNodejs.NodejsFunction(this, 'ListTasksFunction', {
+      runtime: lambda.Runtime.NODEJS_22_X,
+      entry: path.join(__dirname, '../../src/handlers/listTasks.ts'),
+      handler: 'listTasks',
+      environment: {
+        TASKS_TABLE: tasksTable.tableName,
+      },
+      bundling: {
+        minify: true,
+        sourceMap: true,
+      },
+      logGroup: listTasksFunctionLogGroup,
+      memorySize: 1024,
+      timeout: cdk.Duration.seconds(6),
+    });
+
+    // Grant the Lambda functions permissions to access the DynamoDB table
     tasksTable.grantWriteData(createTaskFunction);
+    tasksTable.grantReadData(listTasksFunction);
 
     // Create API Gateway
     const api = new apigateway.RestApi(this, 'TasksApi', {
@@ -58,6 +82,9 @@ export class ApiStack extends cdk.Stack {
 
     // Add a POST method to create a new task
     tasksResource.addMethod('POST', new apigateway.LambdaIntegration(createTaskFunction));
+
+    // Add a GET method to list all tasks
+    tasksResource.addMethod('GET', new apigateway.LambdaIntegration(listTasksFunction));
 
     // Output the API URL
     new cdk.CfnOutput(this, 'ApiUrl', {
