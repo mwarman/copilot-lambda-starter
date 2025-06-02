@@ -75,7 +75,7 @@ The requirements are located in the [`docs/requirements`](docs/requirements/) di
 
 #### Ask Copilot
 
-Drag the [01-create-task.md](docs/requirements/01-create-task.md) requirements specification into the Copilot chat. Any files you explictly drag onto the Copilot chat will be included in the context of the current session. Enter the following prompt:
+Drag the [01-create-task.md](docs/requirements/01-create-task.md) requirements specification into the Copilot chat. Any files you explicitly drag onto the Copilot chat will be included in the context of the current session. Enter the following prompt:
 
 ```
 let's update the project with these requirements.
@@ -89,7 +89,7 @@ let's update the project with the requirements in #file:01-create-task.md
 
 Since Copilot is in **Ask** mode, it will not make any changes to the project. Instead it will tell you what the agent _would_ do if it were in **Agent** mode. Ask mode allows you to ask Copilot questions or, in this instance, allows you to get a preview of a more complex set of changes.
 
-If you do not like the apporoach that Copilot proposes, update the requirements specification to be more specific. Remember that Copilot will improve as the code base grows.
+If you do not like the approach that Copilot proposes, update the requirements specification to be more specific. Remember that Copilot will improve as the code base grows.
 
 #### Agent mode
 
