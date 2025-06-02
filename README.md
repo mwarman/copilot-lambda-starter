@@ -71,14 +71,20 @@ When you implement the second and subsequent stories, Copilot will use the exist
 
 #### Requirements
 
-The requirements are located in the `docs/requirements` directory. Open Copilot chat in VS Code and place it into **Ask** mode if it is not already.
+The requirements are located in the [`docs/requirements`](docs/requirements/) directory. Open Copilot chat in VS Code and place it into **Ask** mode if it is not already.
 
 #### Ask Copilot
 
-Drag the `01` requirements specification into the Copilot chat. Any files you explictly drag onto the Copilot chat will be included in the context of the current session. Enter the following prompt:
+Drag the [01-create-task.md](docs/requirements/01-create-task.md) requirements specification into the Copilot chat. Any files you explictly drag onto the Copilot chat will be included in the context of the current session. Enter the following prompt:
 
 ```
 let's update the project with these requirements.
+```
+
+or you can use the `#file` command to explicitly reference the requirements like this:
+
+```
+let's update the project with the requirements in #file:01-create-task.md
 ```
 
 Since Copilot is in **Ask** mode, it will not make any changes to the project. Instead it will tell you what the agent _would_ do if it were in **Agent** mode. Ask mode allows you to ask Copilot questions or, in this instance, allows you to get a preview of a more complex set of changes.
@@ -87,7 +93,9 @@ If you do not like the apporoach that Copilot proposes, update the requirements 
 
 #### Agent mode
 
-When you are ready, change Copilot from **Ask** to **Agent** mode. Submit the prompt once again and the Copilot agent will update the VS Code project with the changes.
+Change Copilot from **Ask** to **Agent** mode. In **Agent** mode, Copilot is free to make changes to your project. Don't worry though, you may pause or cancel the Copilot session at any time. Any changes made by Copilot are not fully applied until you choose to **Keep** them, or you may revert the project by choosing to **Undo** the changes.
+
+When you are ready, submit the prompt in **Agent** mode and the Copilot agent will update the VS Code project with the changes.
 
 #### One story at a time
 
