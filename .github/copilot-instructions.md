@@ -10,6 +10,13 @@ You are a **Senior TypeScript developer** working on an AWS Lambda REST API proj
 
 ---
 
+## Project Overview
+
+- **Component:** Task Service **task-service**
+- **Description:** This service provides a REST API for managing tasks, including creating, retrieving, updating, and deleting tasks. It uses AWS Lambda functions triggered by API Gateway events, with business logic encapsulated in service classes. The project follows best practices for TypeScript development, AWS CDK infrastructure management, and unit testing with Vitest.
+
+---
+
 ## Language & Stack
 
 - **Language:** TypeScript
@@ -52,13 +59,13 @@ You are a **Senior TypeScript developer** working on an AWS Lambda REST API proj
 ```
 /src
   /handlers
-    getUser.ts              # Lambda handler
-    getUser.test.ts         # Unit test for getUser
+    getTask.ts              # Lambda handler
+    getTask.test.ts         # Unit test for getTask
   /services
-    userService.ts          # Business logic
-    userService.test.ts     # Unit test for userService
+    taskService.ts          # Business logic
+    taskService.test.ts     # Unit test for taskService
   /models
-    User.ts
+    Task.ts
   /utils
     response.ts             # Helper for formatting Lambda responses
     response.test.ts
@@ -82,16 +89,16 @@ vitest.config.ts            # Vitest config
 - Example: Basic Lambda + API Gateway route:
 
 ```ts
-const getUserFunction = new NodejsFunction(this, 'GetUserFunction', {
-  entry: '../src/handlers/getUser.ts',
-  handler: 'getUser',
+const getTaskFunction = new NodejsFunction(this, 'GetTaskFunction', {
+  entry: '../src/handlers/getTask.ts',
+  handler: 'getTask',
   environment: {
-    USERS_TABLE: usersTable.tableName,
+    TASKS_TABLE: tasksTable.tableName,
   },
 });
 
-const api = new RestApi(this, 'UsersApi');
-api.root.addResource('users').addResource('{userId}').addMethod('GET', new LambdaIntegration(getUserFunction));
+const api = new RestApi(this, 'TasksApi');
+api.root.addResource('tasks').addResource('{taskId}').addMethod('GET', new LambdaIntegration(getTaskFunction));
 ```
 
 ---
@@ -105,17 +112,76 @@ api.root.addResource('users').addResource('{userId}').addMethod('GET', new Lambd
 ### Handler Format Example
 
 ```ts
-export const getUser = async (event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> => {
-  const userId = event.pathParameters?.userId;
-  if (!userId) return badRequest('Missing userId');
+// Zod schema for request validation
+const requestSchema = z.object({
+  pathParameters: z.object({
+    taskId: z.string().min(1, 'taskId path variable is required'),
+  }),
+});
+type Request = z.infer<typeof requestSchema>;
+
+// Lambda handler function
+export const getTask = async (event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> => {
+  // Validate input
+  const result = requestSchema.safeParse<APIGatewayProxyEvent, Request>(event);
+  if (!result.success) return badRequest('Invalid request');
+
+  // Extract validated data
+  const request: Request = result.data;
+  const { taskId } = request.pathParameters;
 
   try {
-    const user = await userService.getUserById(userId);
-    return user ? ok(user) : notFound('User not found');
+    // Call service to get task
+    const task = await TaskService.getTaskById(taskId);
+    return task ? ok(task) : notFound('Task not found');
   } catch (err) {
-    console.error('Failed to get user:', err);
+    console.error('Failed to get task:', err);
     return internalServerError('Unexpected error');
   }
+};
+```
+
+### Service Format Example
+
+```ts
+import { PutCommand } from '@aws-sdk/lib-dynamodb';
+import { v4 as uuidv4 } from 'uuid';
+import { Task, CreateTaskRequest } from '@/models/Task.js';
+import { dynamoDocClient } from '@/utils/awsClients.js';
+import { logger } from '@/utils/logger.js';
+import { config } from '@/utils/config.js';
+
+// Service function to create a new task
+const createTask = async (createTaskRequest: CreateTaskRequest): Promise<Task> => {
+  // Generate a new ID
+  const taskId = uuidv4();
+
+  // Create the complete task object
+  const task: Task = {
+    id: taskId,
+    title: createTaskRequest.title,
+    detail: createTaskRequest.detail,
+    isComplete: createTaskRequest.isComplete ?? false,
+    dueAt: createTaskRequest.dueAt,
+  };
+
+  // Log the task creation
+  logger.info(`Creating task with ID: ${taskId}`, { task });
+
+  // Save to DynamoDB
+  await dynamoDocClient.send(
+    new PutCommand({
+      TableName: config.TASKS_TABLE,
+      Item: task,
+    }),
+  );
+
+  return task;
+};
+
+// Define and export the TaskService with the methods to handle task operations
+export const TaskService = {
+  createTask,
 };
 ```
 
@@ -136,18 +202,18 @@ export const getUser = async (event: APIGatewayProxyEvent): Promise<APIGatewayPr
 - Mock external calls (e.g., AWS SDK, databases).
 - Prefer unit tests over integration tests in this repo.
 
-### Example Test File (`getUser.test.ts`)
+### Example Test File (`getTask.test.ts`)
 
 ```ts
-import { getUser } from './getUser';
+import { getTask } from './getTask';
 import { APIGatewayProxyEvent } from 'aws-lambda';
 
-it('returns 400 if userId is missing', async () => {
+it('returns 400 if taskId is missing', async () => {
   // Arrange
   const event = { pathParameters: {} } as unknown as APIGatewayProxyEvent;
 
   // Act
-  const response = await getUser(event);
+  const response = await getTask(event);
 
   // Assert
   expect(response.statusCode).toBe(400);
@@ -169,12 +235,12 @@ it('returns 400 if userId is missing', async () => {
 
 ```ts
 /**
- * Lambda Handler: getUser
+ * Lambda Handler: getTask
  *
  * Copilot Instructions:
- * - Parse userId from event.pathParameters
- * - Call userService.getUserById(userId)
- * - Return 200 with user object or 404 if not found
+ * - Parse taskId from event.pathParameters
+ * - Call taskService.getTaskById(taskId)
+ * - Return 200 with task object or 404 if not found
  * - Validate input; return 400 if invalid
  * - Catch unexpected errors; log and return 500
  */
