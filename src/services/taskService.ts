@@ -118,43 +118,61 @@ const updateTask = async (taskId: string, updateTaskRequest: UpdateTaskRequest):
   }
 
   // Build update expression and attribute values
-  const updateExpressions: string[] = [];
+  const setExpressions: string[] = [];
+  const removeExpressions: string[] = [];
   const expressionAttributeNames: Record<string, string> = {};
   const expressionAttributeValues: Record<string, unknown> = {};
 
   // Add each provided field to the update expression
   if (updateTaskRequest.title !== undefined) {
-    updateExpressions.push('#title = :title');
+    setExpressions.push('#title = :title');
     expressionAttributeNames['#title'] = 'title';
     expressionAttributeValues[':title'] = updateTaskRequest.title;
   }
 
+  // Handle detail attribute - remove if not provided
   if (updateTaskRequest.detail !== undefined) {
-    updateExpressions.push('#detail = :detail');
+    setExpressions.push('#detail = :detail');
     expressionAttributeNames['#detail'] = 'detail';
     expressionAttributeValues[':detail'] = updateTaskRequest.detail;
+  } else if (existingTask.detail !== undefined) {
+    removeExpressions.push('#detail');
+    expressionAttributeNames['#detail'] = 'detail';
   }
 
   if (updateTaskRequest.isComplete !== undefined) {
-    updateExpressions.push('#isComplete = :isComplete');
+    setExpressions.push('#isComplete = :isComplete');
     expressionAttributeNames['#isComplete'] = 'isComplete';
     expressionAttributeValues[':isComplete'] = updateTaskRequest.isComplete;
   }
 
+  // Handle dueAt attribute - remove if not provided
   if (updateTaskRequest.dueAt !== undefined) {
-    updateExpressions.push('#dueAt = :dueAt');
+    setExpressions.push('#dueAt = :dueAt');
     expressionAttributeNames['#dueAt'] = 'dueAt';
     expressionAttributeValues[':dueAt'] = updateTaskRequest.dueAt;
+  } else if (existingTask.dueAt !== undefined) {
+    removeExpressions.push('#dueAt');
+    expressionAttributeNames['#dueAt'] = 'dueAt';
   }
 
-  // If no fields to update, return the existing task
-  if (updateExpressions.length === 0) {
+  // If no fields to update or remove, return the existing task
+  if (setExpressions.length === 0 && removeExpressions.length === 0) {
     logger.info('No changes to update for task', { taskId });
     return existingTask;
   }
 
   // Create the update expression
-  const updateExpression = `SET ${updateExpressions.join(', ')}`;
+  let updateExpression = '';
+
+  if (setExpressions.length > 0) {
+    updateExpression += `SET ${setExpressions.join(', ')}`;
+  }
+
+  if (removeExpressions.length > 0) {
+    updateExpression += updateExpression ? ' REMOVE ' : 'REMOVE ';
+    updateExpression += removeExpressions.join(', ');
+  }
 
   logger.debug('Updating task in DynamoDB', {
     tableName: config.TASKS_TABLE,

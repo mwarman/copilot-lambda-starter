@@ -374,10 +374,11 @@ describe('TaskService', () => {
       expect(UpdateCommand).toHaveBeenCalledWith({
         TableName: config.TASKS_TABLE,
         Key: { id: taskId },
-        UpdateExpression: 'SET #title = :title, #isComplete = :isComplete',
+        UpdateExpression: 'SET #title = :title, #isComplete = :isComplete REMOVE #detail',
         ExpressionAttributeNames: {
           '#title': 'title',
           '#isComplete': 'isComplete',
+          '#detail': 'detail',
         },
         ExpressionAttributeValues: {
           ':title': 'Updated Title',
@@ -429,12 +430,20 @@ describe('TaskService', () => {
       // Arrange
       const { dynamoDocClient } = await import('@/utils/awsClients.js');
       const { logger } = await import('@/utils/logger.js');
+      const { config } = await import('@/utils/config.js');
 
       const taskId = 'task123';
       const existingTask = {
         id: taskId,
         title: 'Original Title',
         detail: 'Original Detail',
+        isComplete: false,
+      };
+
+      // Result task after detail is removed
+      const updatedTask = {
+        id: taskId,
+        title: 'Original Title',
         isComplete: false,
       };
 
@@ -447,13 +456,32 @@ describe('TaskService', () => {
         Item: existingTask,
       });
 
+      // Mock the DynamoDB update response
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (dynamoDocClient.send as any).mockResolvedValueOnce({
+        Attributes: updatedTask,
+      });
+
       // Act
       const result = await taskService.updateTask(taskId, updateTaskRequest);
 
       // Assert
-      expect(result).toEqual(existingTask);
-      expect(dynamoDocClient.send).toHaveBeenCalledTimes(1); // Only getTaskById called, not update
-      expect(logger.info).toHaveBeenCalledWith('No changes to update for task', { taskId });
+      expect(result).toEqual(updatedTask);
+      expect(dynamoDocClient.send).toHaveBeenCalledTimes(2); // getTaskById and update are called to remove detail
+
+      // Check that UpdateCommand was called with the correct parameters to remove detail
+      expect(UpdateCommand).toHaveBeenCalledWith({
+        TableName: config.TASKS_TABLE,
+        Key: { id: taskId },
+        UpdateExpression: 'REMOVE #detail',
+        ExpressionAttributeNames: {
+          '#detail': 'detail',
+        },
+        ExpressionAttributeValues: {},
+        ReturnValues: 'ALL_NEW',
+      });
+
+      expect(logger.info).toHaveBeenCalledWith('Task updated successfully', { taskId });
     });
 
     it('should update only specified fields', async () => {
@@ -503,9 +531,10 @@ describe('TaskService', () => {
       expect(UpdateCommand).toHaveBeenCalledWith({
         TableName: config.TASKS_TABLE,
         Key: { id: taskId },
-        UpdateExpression: 'SET #detail = :detail',
+        UpdateExpression: 'SET #detail = :detail REMOVE #dueAt',
         ExpressionAttributeNames: {
           '#detail': 'detail',
+          '#dueAt': 'dueAt',
         },
         ExpressionAttributeValues: {
           ':detail': 'Updated Detail',
@@ -543,6 +572,69 @@ describe('TaskService', () => {
 
       // Act & Assert
       await expect(taskService.updateTask(taskId, updateTaskRequest)).rejects.toThrow('DynamoDB Error');
+    });
+
+    it('should remove detail and dueAt fields when not provided in the request', async () => {
+      // Arrange
+      const { dynamoDocClient } = await import('@/utils/awsClients.js');
+      const { config } = await import('@/utils/config.js');
+      const { logger } = await import('@/utils/logger.js');
+
+      const taskId = 'task123';
+      const existingTask = {
+        id: taskId,
+        title: 'Original Title',
+        detail: 'Original Detail',
+        isComplete: false,
+        dueAt: '2023-12-31',
+      };
+
+      // Update request without detail or dueAt fields
+      const updateTaskRequest: UpdateTaskRequest = {
+        title: 'Updated Title',
+      };
+
+      // Mock result without detail and dueAt
+      const updatedTask = {
+        id: taskId,
+        title: 'Updated Title',
+        isComplete: false,
+      };
+
+      // Mock the DynamoDB get response
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (dynamoDocClient.send as any).mockResolvedValueOnce({
+        Item: existingTask,
+      });
+
+      // Mock the DynamoDB update response
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (dynamoDocClient.send as any).mockResolvedValueOnce({
+        Attributes: updatedTask,
+      });
+
+      // Act
+      const result = await taskService.updateTask(taskId, updateTaskRequest);
+
+      // Assert
+      // Check that UpdateCommand was called with correct parameters
+      expect(UpdateCommand).toHaveBeenCalledWith({
+        TableName: config.TASKS_TABLE,
+        Key: { id: taskId },
+        UpdateExpression: 'SET #title = :title REMOVE #detail, #dueAt',
+        ExpressionAttributeNames: {
+          '#title': 'title',
+          '#detail': 'detail',
+          '#dueAt': 'dueAt',
+        },
+        ExpressionAttributeValues: {
+          ':title': 'Updated Title',
+        },
+        ReturnValues: 'ALL_NEW',
+      });
+
+      expect(result).toEqual(updatedTask);
+      expect(logger.info).toHaveBeenCalledWith('Task updated successfully', { taskId });
     });
   });
 });
