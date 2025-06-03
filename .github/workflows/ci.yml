@@ -1,0 +1,151 @@
+# AWS Lambda REST API CI Workflow
+# This workflow runs the following checks:
+# - Code formatting and linting
+# - Unit tests with coverage
+# - Infrastructure validation
+# - Dependency checks
+name: Continuous Integration
+
+on:
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  lint-format:
+    name: Lint and Format Check
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: '.nvmrc'
+          cache: 'npm'
+
+      - name: Install Dependencies
+        run: npm ci
+
+      - name: Check Format with Prettier
+        run: npx prettier --check .
+
+      - name: Lint with ESLint
+        run: npm run lint
+
+  test:
+    name: Unit Tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: '.nvmrc'
+          cache: 'npm'
+
+      - name: Install Dependencies
+        run: npm ci
+
+      - name: Run Unit Tests with Coverage
+        run: npm run test:coverage
+
+      - name: Upload Test Results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results
+          path: coverage/
+
+  cdk-validation:
+    name: Infrastructure Validation
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: '.nvmrc'
+          cache: 'npm'
+
+      - name: Install Dependencies
+        run: npm ci
+
+      - name: CDK Synthesis
+        run: npx cdk synth
+
+  dependency-check:
+    name: Dependency Checks
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: '.nvmrc'
+          cache: 'npm'
+
+      - name: Install Dependencies
+        run: npm ci
+
+      - name: Audit Dependencies
+        run: npm audit --production
+        continue-on-error: true
+
+      - name: Check Outdated Dependencies
+        run: npm outdated
+        continue-on-error: true
+
+      - name: Generate Dependency Report
+        run: |
+          echo "## Dependency Audit Summary" > dependency-report.md
+          echo "Report generated on $(date)" >> dependency-report.md
+          echo "### Security Audit" >> dependency-report.md
+          npm audit --json | jq 'if has("vulnerabilities") then .vulnerabilities else {} end' | jq 'length' | xargs -I {} echo "* Found {} vulnerabilities" >> dependency-report.md
+          echo "### Outdated Packages" >> dependency-report.md
+          npm outdated --json | jq 'length' | xargs -I {} echo "* Found {} outdated packages" >> dependency-report.md
+        continue-on-error: true
+
+      - name: Upload Dependency Report
+        uses: actions/upload-artifact@v4
+        with:
+          name: dependency-report
+          path: dependency-report.md
+        continue-on-error: true
+
+  workflow-summary:
+    name: Workflow Summary
+    needs: [lint-format, test, cdk-validation, dependency-check]
+    runs-on: ubuntu-latest
+    if: always()
+    steps:
+      - name: Create Summary
+        run: |
+          echo "## CI Workflow Summary" >> $GITHUB_STEP_SUMMARY
+          echo "| Job | Status |" >> $GITHUB_STEP_SUMMARY
+          echo "| --- | ------ |" >> $GITHUB_STEP_SUMMARY
+          echo "| Lint and Format | ${{ needs.lint-format.result == 'success' && '✅ Passed' || '❌ Failed' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Unit Tests | ${{ needs.test.result == 'success' && '✅ Passed' || '❌ Failed' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Infrastructure | ${{ needs.cdk-validation.result == 'success' && '✅ Passed' || '❌ Failed' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Dependencies | ${{ needs.dependency-check.result == 'success' && '✅ Passed' || '⚠️ Warnings' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+          if [[ "${{ needs.lint-format.result }}" == "success" && "${{ needs.test.result }}" == "success" && "${{ needs.cdk-validation.result }}" == "success" ]]; then
+            echo "Overall Status: ✅ All Required Checks Passed" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "Overall Status: ❌ Some Checks Failed" >> $GITHUB_STEP_SUMMARY
+          fi
+
+      - name: Fail Workflow if Required Jobs Failed
+        if: >-
+          needs.lint-format.result != 'success' || 
+          needs.test.result != 'success' || 
+          needs.cdk-validation.result != 'success'
+        run: exit 1

@@ -12,6 +12,12 @@ export default defineConfig({
       reporter: ['text', 'html'],
       include: ['src/**/*.ts'],
       exclude: ['**/*.test.ts', 'src/models/**'],
+      thresholds: {
+        statements: 80,
+        branches: 80,
+        functions: 80,
+        lines: 80,
+      },
     },
     alias: {
       '@': path.resolve(__dirname, 'src'),
