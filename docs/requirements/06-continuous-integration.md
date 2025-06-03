@@ -8,7 +8,7 @@ This document describes the requirements for implementing a Continuous Integrati
 
 Create a GitHub Actions workflow to automate the testing, building, and validation of the AWS Lambda REST API project. The CI workflow should run automatically when code changes are pushed to the repository or when pull requests are created or updated. The workflow should ensure that all code meets the project's quality standards before it can be deployed to any environment.
 
-The CI workflow should include multiple jobs that run in parallel where possible, to validate different aspects of the codebase. The workflow should check out the source code, set up the necessary runtime environment (Node.js 22+), install dependencies, and execute various validation steps.
+The CI workflow should include multiple jobs that run in parallel where possible, to validate different aspects of the codebase. The workflow should check out the source code, set up the necessary runtime environment (Node.js using the .nvmrc file), install dependencies, and execute various validation steps.
 
 The CI workflow should include steps to validate code formatting with Prettier, check code quality with ESLint, run unit tests with Vitest to ensure code functionality, and perform a CDK synthesis to validate that the infrastructure code can be properly synthesized without errors.
 
@@ -34,7 +34,7 @@ The GitHub Actions workflow should include the following jobs:
 - Install all project dependencies
 - Run all unit tests using Vitest
 - Collect and report test coverage metrics
-- Fail the workflow if any tests fail or if coverage falls below an acceptable threshold
+- Fail the workflow if any tests fail or if coverage falls below an acceptable threshold (80%)
 
 3. **Infrastructure Validation**:
 
