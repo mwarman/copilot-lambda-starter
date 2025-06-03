@@ -31,12 +31,14 @@ type Request = z.infer<typeof requestSchema>;
  * @returns API Gateway response with task or error
  */
 export const getTask = async (event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> => {
-  logger.debug('Getting task', { event });
+  const requestId = event.requestContext?.requestId;
+  logger.info('Processing get task request', { requestId });
+  logger.debug('Received event', { requestId, event });
 
   // Validate input
   const result = requestSchema.safeParse(event);
   if (!result.success) {
-    logger.warn('Invalid request', { errors: result.error.errors });
+    logger.warn('Invalid request', { requestId, errors: result.error.errors });
     return badRequest('Invalid request: taskId is required');
   }
 
@@ -49,14 +51,14 @@ export const getTask = async (event: APIGatewayProxyEvent): Promise<APIGatewayPr
     const task = await TaskService.getTaskById(taskId);
 
     if (!task) {
-      logger.info('Task not found', { taskId });
+      logger.info('Task not found', { requestId, taskId });
       return notFound(`Task with ID ${taskId} not found`);
     }
 
-    logger.info('Task retrieved successfully', { taskId });
+    logger.info('Task retrieved successfully', { requestId, taskId });
     return ok(task);
   } catch (err) {
-    logger.error('Failed to get task', err as Error, { taskId });
+    logger.error('Failed to get task', err as Error, { requestId, taskId });
     return internalServerError('An unexpected error occurred while retrieving the task');
   }
 };

@@ -14,6 +14,7 @@ import { logger } from '@/utils/logger';
 export const listTasks = async (event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> => {
   const requestId = event.requestContext?.requestId;
   logger.info('Processing list tasks request', { requestId });
+  logger.debug('Received event', { requestId, event });
 
   try {
     logger.debug('Retrieving all tasks', { requestId });

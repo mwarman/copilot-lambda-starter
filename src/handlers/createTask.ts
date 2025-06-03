@@ -36,6 +36,7 @@ const requestSchema = z.object({
 export const createTask = async (event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> => {
   const requestId = event.requestContext?.requestId;
   logger.info('Processing create task request', { requestId });
+  logger.debug('Received event', { requestId, event });
 
   try {
     // Parse and validate request
