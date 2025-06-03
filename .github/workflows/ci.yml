@@ -7,6 +7,13 @@
 name: Continuous Integration
 
 on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+      - 'releases/*'
+      - 'hotfix/*'
+      - 'feature/*'
   pull_request:
     branches:
       - main
