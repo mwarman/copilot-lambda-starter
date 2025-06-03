@@ -2,9 +2,9 @@
  * The TaskService module provides functionality to operate on tasks in DynamoDB.
  * It includes methods to handle task creation, validation, and interaction with AWS services.
  */
-import { PutCommand, ScanCommand, GetCommand } from '@aws-sdk/lib-dynamodb';
+import { PutCommand, ScanCommand, GetCommand, UpdateCommand } from '@aws-sdk/lib-dynamodb';
 import { v4 as uuidv4 } from 'uuid';
-import { Task, CreateTaskRequest } from '@/models/Task.js';
+import { Task, CreateTaskRequest, UpdateTaskRequest } from '@/models/Task.js';
 import { dynamoDocClient } from '@/utils/awsClients.js';
 import { logger } from '@/utils/logger.js';
 import { config } from '@/utils/config.js';
@@ -100,9 +100,96 @@ const getTaskById = async (taskId: string): Promise<Task | undefined> => {
   return task;
 };
 
+/**
+ * Updates an existing task in DynamoDB
+ *
+ * @param taskId The unique identifier of the task to update
+ * @param updateTaskRequest The task data to update
+ * @returns The updated task if found, undefined otherwise
+ */
+const updateTask = async (taskId: string, updateTaskRequest: UpdateTaskRequest): Promise<Task | undefined> => {
+  logger.debug('Updating task', { taskId, updateData: updateTaskRequest });
+
+  // First check if the task exists
+  const existingTask = await getTaskById(taskId);
+  if (!existingTask) {
+    logger.info('Task not found for update', { taskId });
+    return undefined;
+  }
+
+  // Build update expression and attribute values
+  const updateExpressions: string[] = [];
+  const expressionAttributeNames: Record<string, string> = {};
+  const expressionAttributeValues: Record<string, unknown> = {};
+
+  // Add each provided field to the update expression
+  if (updateTaskRequest.title !== undefined) {
+    updateExpressions.push('#title = :title');
+    expressionAttributeNames['#title'] = 'title';
+    expressionAttributeValues[':title'] = updateTaskRequest.title;
+  }
+
+  if (updateTaskRequest.detail !== undefined) {
+    updateExpressions.push('#detail = :detail');
+    expressionAttributeNames['#detail'] = 'detail';
+    expressionAttributeValues[':detail'] = updateTaskRequest.detail;
+  }
+
+  if (updateTaskRequest.isComplete !== undefined) {
+    updateExpressions.push('#isComplete = :isComplete');
+    expressionAttributeNames['#isComplete'] = 'isComplete';
+    expressionAttributeValues[':isComplete'] = updateTaskRequest.isComplete;
+  }
+
+  if (updateTaskRequest.dueAt !== undefined) {
+    updateExpressions.push('#dueAt = :dueAt');
+    expressionAttributeNames['#dueAt'] = 'dueAt';
+    expressionAttributeValues[':dueAt'] = updateTaskRequest.dueAt;
+  }
+
+  // If no fields to update, return the existing task
+  if (updateExpressions.length === 0) {
+    logger.info('No changes to update for task', { taskId });
+    return existingTask;
+  }
+
+  // Create the update expression
+  const updateExpression = `SET ${updateExpressions.join(', ')}`;
+
+  logger.debug('Updating task in DynamoDB', {
+    tableName: config.TASKS_TABLE,
+    taskId,
+    updateExpression,
+    expressionAttributeNames,
+    expressionAttributeValues,
+  });
+
+  // Update in DynamoDB
+  const response = await dynamoDocClient.send(
+    new UpdateCommand({
+      TableName: config.TASKS_TABLE,
+      Key: { id: taskId },
+      UpdateExpression: updateExpression,
+      ExpressionAttributeNames: expressionAttributeNames,
+      ExpressionAttributeValues: expressionAttributeValues,
+      ReturnValues: 'ALL_NEW',
+    }),
+  );
+
+  // Get the updated task
+  const updatedTask = response.Attributes as Task;
+
+  logger.info('Task updated successfully', { taskId });
+  logger.debug('Updated task details', { updatedTask });
+
+  // Return the updated task
+  return updatedTask;
+};
+
 // Define and export the TaskService with the methods to handle task operations
 export const TaskService = {
   createTask,
   listTasks,
   getTaskById,
+  updateTask,
 };

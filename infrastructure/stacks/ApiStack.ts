@@ -87,10 +87,34 @@ export class ApiStack extends cdk.Stack {
       timeout: cdk.Duration.seconds(6),
     });
 
+    // Create and configure CloudWatch Log Group for the update task Lambda function
+    const updateTaskFunctionLogGroup = new logs.LogGroup(this, 'UpdateTaskFunctionLogGroup', {
+      retention: logs.RetentionDays.ONE_WEEK,
+      removalPolicy: cdk.RemovalPolicy.DESTROY,
+    });
+
+    // Create Lambda function for updating a task by ID
+    const updateTaskFunction = new lambdaNodejs.NodejsFunction(this, 'UpdateTaskFunction', {
+      runtime: lambda.Runtime.NODEJS_22_X,
+      entry: path.join(__dirname, '../../src/handlers/updateTask.ts'),
+      handler: 'updateTask',
+      environment: {
+        TASKS_TABLE: tasksTable.tableName,
+      },
+      bundling: {
+        minify: true,
+        sourceMap: true,
+      },
+      logGroup: updateTaskFunctionLogGroup,
+      memorySize: 1024,
+      timeout: cdk.Duration.seconds(6),
+    });
+
     // Grant the Lambda functions permissions to access the DynamoDB table
     tasksTable.grantWriteData(createTaskFunction);
     tasksTable.grantReadData(listTasksFunction);
     tasksTable.grantReadData(getTaskFunction);
+    tasksTable.grantReadWriteData(updateTaskFunction);
 
     // Create API Gateway
     const api = new apigateway.RestApi(this, 'TasksApi', {
@@ -115,6 +139,9 @@ export class ApiStack extends cdk.Stack {
 
     // Add a GET method to get a task by ID
     taskResource.addMethod('GET', new apigateway.LambdaIntegration(getTaskFunction));
+
+    // Add a PUT method to update a task by ID
+    taskResource.addMethod('PUT', new apigateway.LambdaIntegration(updateTaskFunction));
 
     // Output the API URL
     new cdk.CfnOutput(this, 'ApiUrl', {

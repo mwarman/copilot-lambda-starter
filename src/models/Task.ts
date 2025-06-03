@@ -30,6 +30,23 @@ export const CreateTaskSchema = TaskSchema.omit({ id: true, isComplete: true }).
   isComplete: z.boolean().default(false).optional(),
 });
 
+/**
+ * Schema for updating an existing Task
+ *
+ * All fields are optional since this is for partial updates:
+ * - title: Optional string, max 100 characters
+ * - detail: Optional string, max 2000 characters
+ * - isComplete: Optional boolean
+ * - dueAt: Optional ISO-8601 date string
+ */
+export const UpdateTaskSchema = z.object({
+  title: z.string().max(100, 'Title must be 100 characters or less').optional(),
+  detail: z.string().max(2000, 'Detail must be 2000 characters or less').optional(),
+  isComplete: z.boolean().optional(),
+  dueAt: z.string().date().optional(),
+});
+
 // Type definitions derived from the schemas
 export type Task = z.infer<typeof TaskSchema>;
 export type CreateTaskRequest = z.infer<typeof CreateTaskSchema>;
+export type UpdateTaskRequest = z.infer<typeof UpdateTaskSchema>;

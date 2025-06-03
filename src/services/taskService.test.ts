@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { v4 as uuidv4 } from 'uuid';
-import { PutCommand, ScanCommand, GetCommand } from '@aws-sdk/lib-dynamodb';
-import { CreateTaskRequest } from '@/models/Task.js';
+import { PutCommand, ScanCommand, GetCommand, UpdateCommand } from '@aws-sdk/lib-dynamodb';
+import { CreateTaskRequest, UpdateTaskRequest } from '@/models/Task.js';
 
 // Mock dependencies
 vi.mock('@aws-sdk/lib-dynamodb', () => ({
@@ -12,6 +12,9 @@ vi.mock('@aws-sdk/lib-dynamodb', () => ({
     ...params,
   })),
   GetCommand: vi.fn().mockImplementation((params) => ({
+    ...params,
+  })),
+  UpdateCommand: vi.fn().mockImplementation((params) => ({
     ...params,
   })),
 }));
@@ -315,6 +318,231 @@ describe('TaskService', () => {
 
       // Act & Assert
       await expect(taskService.getTaskById(taskId)).rejects.toThrow('DynamoDB Error');
+    });
+  });
+
+  describe('updateTask', () => {
+    it('should update a task with the provided data', async () => {
+      // Arrange
+      const { dynamoDocClient } = await import('@/utils/awsClients.js');
+      const { logger } = await import('@/utils/logger.js');
+      const { config } = await import('@/utils/config.js');
+
+      const taskId = 'task123';
+      const existingTask = {
+        id: taskId,
+        title: 'Original Title',
+        detail: 'Original Detail',
+        isComplete: false,
+      };
+
+      const updateTaskRequest: UpdateTaskRequest = {
+        title: 'Updated Title',
+        isComplete: true,
+      };
+
+      const updatedTask = {
+        id: taskId,
+        title: 'Updated Title',
+        detail: 'Original Detail',
+        isComplete: true,
+      };
+
+      // Mock the DynamoDB get response for checking if task exists
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (dynamoDocClient.send as any).mockResolvedValueOnce({
+        Item: existingTask,
+      });
+
+      // Mock the DynamoDB update response
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (dynamoDocClient.send as any).mockResolvedValueOnce({
+        Attributes: updatedTask,
+      });
+
+      // Act
+      const result = await taskService.updateTask(taskId, updateTaskRequest);
+
+      // Assert
+      // Check that GetCommand was called with the correct parameters
+      expect(GetCommand).toHaveBeenCalledWith({
+        TableName: config.TASKS_TABLE,
+        Key: { id: taskId },
+      });
+
+      // Check that UpdateCommand was called with the correct parameters
+      expect(UpdateCommand).toHaveBeenCalledWith({
+        TableName: config.TASKS_TABLE,
+        Key: { id: taskId },
+        UpdateExpression: 'SET #title = :title, #isComplete = :isComplete',
+        ExpressionAttributeNames: {
+          '#title': 'title',
+          '#isComplete': 'isComplete',
+        },
+        ExpressionAttributeValues: {
+          ':title': 'Updated Title',
+          ':isComplete': true,
+        },
+        ReturnValues: 'ALL_NEW',
+      });
+
+      // Check that the document client's send method was called twice (get + update)
+      expect(dynamoDocClient.send).toHaveBeenCalledTimes(2);
+
+      // Check that the updated task was returned correctly
+      expect(result).toEqual(updatedTask);
+
+      // Check logging
+      expect(logger.debug).toHaveBeenCalledWith('Updating task', {
+        taskId,
+        updateData: updateTaskRequest,
+      });
+      expect(logger.info).toHaveBeenCalledWith('Task updated successfully', { taskId });
+    });
+
+    it('should return undefined when task does not exist', async () => {
+      // Arrange
+      const { dynamoDocClient } = await import('@/utils/awsClients.js');
+      const { logger } = await import('@/utils/logger.js');
+
+      const taskId = 'nonexistent-task';
+      const updateTaskRequest: UpdateTaskRequest = {
+        title: 'Updated Title',
+      };
+
+      // Mock the DynamoDB get response with no item
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (dynamoDocClient.send as any).mockResolvedValueOnce({
+        Item: undefined,
+      });
+
+      // Act
+      const result = await taskService.updateTask(taskId, updateTaskRequest);
+
+      // Assert
+      expect(result).toBeUndefined();
+      expect(dynamoDocClient.send).toHaveBeenCalledTimes(1); // Only getTaskById called, not update
+      expect(logger.info).toHaveBeenCalledWith('Task not found for update', { taskId });
+    });
+
+    it('should return existing task when no fields to update', async () => {
+      // Arrange
+      const { dynamoDocClient } = await import('@/utils/awsClients.js');
+      const { logger } = await import('@/utils/logger.js');
+
+      const taskId = 'task123';
+      const existingTask = {
+        id: taskId,
+        title: 'Original Title',
+        detail: 'Original Detail',
+        isComplete: false,
+      };
+
+      // Empty update request
+      const updateTaskRequest: UpdateTaskRequest = {};
+
+      // Mock the DynamoDB get response
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (dynamoDocClient.send as any).mockResolvedValueOnce({
+        Item: existingTask,
+      });
+
+      // Act
+      const result = await taskService.updateTask(taskId, updateTaskRequest);
+
+      // Assert
+      expect(result).toEqual(existingTask);
+      expect(dynamoDocClient.send).toHaveBeenCalledTimes(1); // Only getTaskById called, not update
+      expect(logger.info).toHaveBeenCalledWith('No changes to update for task', { taskId });
+    });
+
+    it('should update only specified fields', async () => {
+      // Arrange
+      const { dynamoDocClient } = await import('@/utils/awsClients.js');
+      const { config } = await import('@/utils/config.js');
+
+      const taskId = 'task123';
+      const existingTask = {
+        id: taskId,
+        title: 'Original Title',
+        detail: 'Original Detail',
+        isComplete: false,
+        dueAt: '2023-12-31',
+      };
+
+      // Update only detail field
+      const updateTaskRequest: UpdateTaskRequest = {
+        detail: 'Updated Detail',
+      };
+
+      const updatedTask = {
+        id: taskId,
+        title: 'Original Title',
+        detail: 'Updated Detail',
+        isComplete: false,
+        dueAt: '2023-12-31',
+      };
+
+      // Mock the DynamoDB get response
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (dynamoDocClient.send as any).mockResolvedValueOnce({
+        Item: existingTask,
+      });
+
+      // Mock the DynamoDB update response
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (dynamoDocClient.send as any).mockResolvedValueOnce({
+        Attributes: updatedTask,
+      });
+
+      // Act
+      const result = await taskService.updateTask(taskId, updateTaskRequest);
+
+      // Assert
+      // Check that UpdateCommand was called with only the detail field
+      expect(UpdateCommand).toHaveBeenCalledWith({
+        TableName: config.TASKS_TABLE,
+        Key: { id: taskId },
+        UpdateExpression: 'SET #detail = :detail',
+        ExpressionAttributeNames: {
+          '#detail': 'detail',
+        },
+        ExpressionAttributeValues: {
+          ':detail': 'Updated Detail',
+        },
+        ReturnValues: 'ALL_NEW',
+      });
+
+      expect(result).toEqual(updatedTask);
+    });
+
+    it('should handle DynamoDB errors', async () => {
+      // Arrange
+      const { dynamoDocClient } = await import('@/utils/awsClients.js');
+      const error = new Error('DynamoDB Error');
+
+      const taskId = 'task123';
+      const existingTask = {
+        id: taskId,
+        title: 'Original Title',
+        isComplete: false,
+      };
+
+      const updateTaskRequest: UpdateTaskRequest = {
+        title: 'Updated Title',
+      };
+
+      // Mock the DynamoDB get response
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (dynamoDocClient.send as any).mockResolvedValueOnce({
+        Item: existingTask,
+      });
+
+      // Mock the DynamoDB update method to throw an error
+      vi.mocked(dynamoDocClient.send).mockRejectedValueOnce(error);
+
+      // Act & Assert
+      await expect(taskService.updateTask(taskId, updateTaskRequest)).rejects.toThrow('DynamoDB Error');
     });
   });
 });
