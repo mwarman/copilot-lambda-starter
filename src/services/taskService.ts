@@ -2,7 +2,7 @@
  * The TaskService module provides functionality to operate on tasks in DynamoDB.
  * It includes methods to handle task creation, validation, and interaction with AWS services.
  */
-import { PutCommand, ScanCommand } from '@aws-sdk/lib-dynamodb';
+import { PutCommand, ScanCommand, GetCommand } from '@aws-sdk/lib-dynamodb';
 import { v4 as uuidv4 } from 'uuid';
 import { Task, CreateTaskRequest } from '@/models/Task.js';
 import { dynamoDocClient } from '@/utils/awsClients.js';
@@ -70,8 +70,39 @@ const listTasks = async (): Promise<Task[]> => {
   return tasks;
 };
 
+/**
+ * Retrieves a task by its ID from DynamoDB
+ *
+ * @param taskId The unique identifier of the task to retrieve
+ * @returns The task if found, undefined otherwise
+ */
+const getTaskById = async (taskId: string): Promise<Task | undefined> => {
+  logger.debug('Getting task by ID', { taskId });
+
+  // Get the task from DynamoDB
+  const response = await dynamoDocClient.send(
+    new GetCommand({
+      TableName: config.TASKS_TABLE,
+      Key: { id: taskId },
+    }),
+  );
+
+  // If the task wasn't found, return undefined
+  if (!response.Item) {
+    logger.info('Task not found', { taskId });
+    return undefined;
+  }
+
+  // Convert the Item to a Task object
+  const task = response.Item as Task;
+
+  logger.info('Task retrieved successfully', { taskId });
+  return task;
+};
+
 // Define and export the TaskService with the methods to handle task operations
 export const TaskService = {
   createTask,
   listTasks,
+  getTaskById,
 };

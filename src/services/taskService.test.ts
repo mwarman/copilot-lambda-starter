@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { v4 as uuidv4 } from 'uuid';
-import { PutCommand, ScanCommand } from '@aws-sdk/lib-dynamodb';
+import { PutCommand, ScanCommand, GetCommand } from '@aws-sdk/lib-dynamodb';
 import { CreateTaskRequest } from '@/models/Task.js';
 
 // Mock dependencies
@@ -9,6 +9,9 @@ vi.mock('@aws-sdk/lib-dynamodb', () => ({
     ...params,
   })),
   ScanCommand: vi.fn().mockImplementation((params) => ({
+    ...params,
+  })),
+  GetCommand: vi.fn().mockImplementation((params) => ({
     ...params,
   })),
 }));
@@ -234,6 +237,84 @@ describe('TaskService', () => {
 
       // Act & Assert
       await expect(taskService.listTasks()).rejects.toThrow('DynamoDB Error');
+    });
+  });
+
+  describe('getTaskById', () => {
+    it('should retrieve a task by ID', async () => {
+      // Arrange
+      const { dynamoDocClient } = await import('@/utils/awsClients.js');
+      const { logger } = await import('@/utils/logger.js');
+      const { config } = await import('@/utils/config.js');
+
+      const taskId = 'task123';
+      const mockTask = {
+        id: taskId,
+        title: 'Test Task',
+        detail: 'This is a test task',
+        isComplete: false,
+      };
+
+      // Mock the DynamoDB get response
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (dynamoDocClient.send as any).mockResolvedValueOnce({
+        Item: mockTask,
+      });
+
+      // Act
+      const result = await taskService.getTaskById(taskId);
+
+      // Assert
+      // Check that GetCommand was called with the correct parameters
+      expect(GetCommand).toHaveBeenCalledWith({
+        TableName: config.TASKS_TABLE,
+        Key: { id: taskId },
+      });
+
+      // Check that the document client's send method was called
+      expect(dynamoDocClient.send).toHaveBeenCalledTimes(1);
+
+      // Check that the task was returned correctly
+      expect(result).toEqual(mockTask);
+
+      // Check logging
+      expect(logger.debug).toHaveBeenCalledWith('Getting task by ID', { taskId });
+      expect(logger.info).toHaveBeenCalledWith('Task retrieved successfully', { taskId });
+    });
+
+    it('should return undefined when task does not exist', async () => {
+      // Arrange
+      const { dynamoDocClient } = await import('@/utils/awsClients.js');
+      const { logger } = await import('@/utils/logger.js');
+
+      const taskId = 'nonexistent-task';
+
+      // Mock the DynamoDB get response with no item
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (dynamoDocClient.send as any).mockResolvedValueOnce({
+        Item: undefined,
+      });
+
+      // Act
+      const result = await taskService.getTaskById(taskId);
+
+      // Assert
+      expect(result).toBeUndefined();
+      expect(logger.info).toHaveBeenCalledWith('Task not found', { taskId });
+    });
+
+    it('should handle DynamoDB errors', async () => {
+      // Arrange
+      const { dynamoDocClient } = await import('@/utils/awsClients.js');
+      const error = new Error('DynamoDB Error');
+
+      // Mock the DynamoDB send method to throw an error
+      vi.mocked(dynamoDocClient.send).mockRejectedValueOnce(error);
+
+      const taskId = 'task123';
+
+      // Act & Assert
+      await expect(taskService.getTaskById(taskId)).rejects.toThrow('DynamoDB Error');
     });
   });
 });
