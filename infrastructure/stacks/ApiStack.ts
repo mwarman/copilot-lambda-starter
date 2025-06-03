@@ -110,11 +110,35 @@ export class ApiStack extends cdk.Stack {
       timeout: cdk.Duration.seconds(6),
     });
 
+    // Create and configure CloudWatch Log Group for the delete task Lambda function
+    const deleteTaskFunctionLogGroup = new logs.LogGroup(this, 'DeleteTaskFunctionLogGroup', {
+      retention: logs.RetentionDays.ONE_WEEK,
+      removalPolicy: cdk.RemovalPolicy.DESTROY,
+    });
+
+    // Create Lambda function for deleting a task by ID
+    const deleteTaskFunction = new lambdaNodejs.NodejsFunction(this, 'DeleteTaskFunction', {
+      runtime: lambda.Runtime.NODEJS_22_X,
+      entry: path.join(__dirname, '../../src/handlers/deleteTask.ts'),
+      handler: 'deleteTask',
+      environment: {
+        TASKS_TABLE: tasksTable.tableName,
+      },
+      bundling: {
+        minify: true,
+        sourceMap: true,
+      },
+      logGroup: deleteTaskFunctionLogGroup,
+      memorySize: 1024,
+      timeout: cdk.Duration.seconds(6),
+    });
+
     // Grant the Lambda functions permissions to access the DynamoDB table
     tasksTable.grantWriteData(createTaskFunction);
     tasksTable.grantReadData(listTasksFunction);
     tasksTable.grantReadData(getTaskFunction);
     tasksTable.grantReadWriteData(updateTaskFunction);
+    tasksTable.grantReadWriteData(deleteTaskFunction);
 
     // Create API Gateway
     const api = new apigateway.RestApi(this, 'TasksApi', {
@@ -142,6 +166,9 @@ export class ApiStack extends cdk.Stack {
 
     // Add a PUT method to update a task by ID
     taskResource.addMethod('PUT', new apigateway.LambdaIntegration(updateTaskFunction));
+
+    // Add a DELETE method to delete a task by ID
+    taskResource.addMethod('DELETE', new apigateway.LambdaIntegration(deleteTaskFunction));
 
     // Output the API URL
     new cdk.CfnOutput(this, 'ApiUrl', {

@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { v4 as uuidv4 } from 'uuid';
-import { PutCommand, ScanCommand, GetCommand, UpdateCommand } from '@aws-sdk/lib-dynamodb';
+import { PutCommand, ScanCommand, GetCommand, UpdateCommand, DeleteCommand } from '@aws-sdk/lib-dynamodb';
 import { CreateTaskRequest, UpdateTaskRequest } from '@/models/Task.js';
 
 // Mock dependencies
@@ -15,6 +15,9 @@ vi.mock('@aws-sdk/lib-dynamodb', () => ({
     ...params,
   })),
   UpdateCommand: vi.fn().mockImplementation((params) => ({
+    ...params,
+  })),
+  DeleteCommand: vi.fn().mockImplementation((params) => ({
     ...params,
   })),
 }));
@@ -635,6 +638,72 @@ describe('TaskService', () => {
 
       expect(result).toEqual(updatedTask);
       expect(logger.info).toHaveBeenCalledWith('Task updated successfully', { taskId });
+    });
+  });
+
+  describe('deleteTask', () => {
+    it('should delete a task when it exists', async () => {
+      // Arrange
+      const { dynamoDocClient } = await import('@/utils/awsClients.js');
+      const { logger } = await import('@/utils/logger.js');
+      const { config } = await import('@/utils/config.js');
+
+      const taskId = 'test-task-id';
+      const existingTask = {
+        id: taskId,
+        title: 'Test Task',
+        isComplete: false,
+      };
+
+      // Mock the task existence check
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (dynamoDocClient.send as any).mockResolvedValueOnce({
+        Item: existingTask,
+      });
+
+      // Mock the delete operation
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (dynamoDocClient.send as any).mockResolvedValueOnce({});
+
+      // Act
+      const result = await taskService.deleteTask(taskId);
+
+      // Assert
+      expect(GetCommand).toHaveBeenCalledWith({
+        TableName: config.TASKS_TABLE,
+        Key: { id: taskId },
+      });
+
+      expect(DeleteCommand).toHaveBeenCalledWith({
+        TableName: config.TASKS_TABLE,
+        Key: { id: taskId },
+      });
+
+      expect(result).toBe(true);
+      expect(logger.info).toHaveBeenCalledWith('Task deleted successfully', { taskId });
+    });
+
+    it('should return false when the task does not exist', async () => {
+      // Arrange
+      const { dynamoDocClient } = await import('@/utils/awsClients.js');
+      const { logger } = await import('@/utils/logger.js');
+
+      const taskId = 'non-existent-task-id';
+
+      // Mock the DynamoDB GetCommand to return undefined (task not found)
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (dynamoDocClient.send as any).mockResolvedValueOnce({
+        Item: undefined,
+      });
+
+      // Act
+      const result = await taskService.deleteTask(taskId);
+
+      // Assert
+      expect(result).toBe(false);
+      expect(logger.info).toHaveBeenCalledWith('Task not found for deletion', { taskId });
+      // Delete command should not be called if the task doesn't exist
+      expect(dynamoDocClient.send).toHaveBeenCalledTimes(1); // Only the GetCommand should be called
     });
   });
 });

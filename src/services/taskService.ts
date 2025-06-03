@@ -2,7 +2,7 @@
  * The TaskService module provides functionality to operate on tasks in DynamoDB.
  * It includes methods to handle task creation, validation, and interaction with AWS services.
  */
-import { PutCommand, ScanCommand, GetCommand, UpdateCommand } from '@aws-sdk/lib-dynamodb';
+import { PutCommand, ScanCommand, GetCommand, UpdateCommand, DeleteCommand } from '@aws-sdk/lib-dynamodb';
 import { v4 as uuidv4 } from 'uuid';
 import { Task, CreateTaskRequest, UpdateTaskRequest } from '@/models/Task.js';
 import { dynamoDocClient } from '@/utils/awsClients.js';
@@ -204,10 +204,39 @@ const updateTask = async (taskId: string, updateTaskRequest: UpdateTaskRequest):
   return updatedTask;
 };
 
+/**
+ * Deletes a task by its ID from DynamoDB
+ *
+ * @param taskId The unique identifier of the task to delete
+ * @returns True if the task was deleted, false if not found
+ */
+const deleteTask = async (taskId: string): Promise<boolean> => {
+  logger.debug('Deleting task', { taskId });
+
+  // First check if the task exists
+  const existingTask = await getTaskById(taskId);
+  if (!existingTask) {
+    logger.info('Task not found for deletion', { taskId });
+    return false;
+  }
+
+  // Delete from DynamoDB using the DeleteCommand
+  await dynamoDocClient.send(
+    new DeleteCommand({
+      TableName: config.TASKS_TABLE,
+      Key: { id: taskId },
+    }),
+  );
+
+  logger.info('Task deleted successfully', { taskId });
+  return true;
+};
+
 // Define and export the TaskService with the methods to handle task operations
 export const TaskService = {
   createTask,
   listTasks,
   getTaskById,
   updateTask,
+  deleteTask,
 };
