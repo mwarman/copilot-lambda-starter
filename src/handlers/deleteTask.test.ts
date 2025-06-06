@@ -3,6 +3,13 @@ import { APIGatewayProxyEvent } from 'aws-lambda';
 import { deleteTask } from './deleteTask.js';
 import { TaskService } from '@/services/taskService.js';
 
+// Mock the config and logger
+vi.mock('../utils/config.js', () => ({
+  config: {
+    TASKS_TABLE: 'mock-tasks-table',
+  },
+}));
+
 // Mock dependencies
 vi.mock('@/services/taskService.js', () => ({
   TaskService: {

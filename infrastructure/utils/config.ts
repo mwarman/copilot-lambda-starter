@@ -10,6 +10,7 @@ const cdkEnvSchema = z.object({
   // Optional variables with defaults
   CDK_DEFAULT_REGION: z.string().default('us-east-1'),
   ENV: z.enum(['dev', 'qa', 'prod']).default('dev'),
+  CORS_ALLOW_ORIGIN: z.string().default('*'),
 });
 
 /**

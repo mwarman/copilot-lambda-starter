@@ -3,6 +3,13 @@ import { APIGatewayProxyEvent } from 'aws-lambda';
 import { CreateTaskRequest } from '@/models/Task';
 import { createTask } from './createTask';
 
+// Mock the config and logger
+vi.mock('../utils/config.js', () => ({
+  config: {
+    TASKS_TABLE: 'mock-tasks-table',
+  },
+}));
+
 // Mock dependencies
 vi.mock('../services/taskService.js', () => ({
   TaskService: {

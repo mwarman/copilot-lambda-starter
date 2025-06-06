@@ -23,4 +23,5 @@ new ApiStack(app, 'TaskServiceApiStack', {
     account: cdkConfig.CDK_DEFAULT_ACCOUNT,
     region: cdkConfig.CDK_DEFAULT_REGION,
   },
+  corsAllowOrigin: cdkConfig.CORS_ALLOW_ORIGIN,
 });

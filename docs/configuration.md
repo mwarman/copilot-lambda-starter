@@ -27,11 +27,12 @@ The following environment variables are required:
 
 The following environment variables are optional and have default values:
 
-| Variable       | Default   | Description                                                               |
-| -------------- | --------- | ------------------------------------------------------------------------- |
-| AWS_REGION     | us-east-1 | The AWS region to use for AWS SDK clients                                 |
-| ENABLE_LOGGING | true      | Indicates if logging is enabled                                           |
-| LOG_LEVEL      | info      | The level of logging statements emitted. One of: debug, info, warn, error |
+| Variable          | Default   | Description                                                               |
+| ----------------- | --------- | ------------------------------------------------------------------------- |
+| AWS_REGION        | us-east-1 | The AWS region to use for AWS SDK clients                                 |
+| ENABLE_LOGGING    | true      | Indicates if logging is enabled                                           |
+| LOG_LEVEL         | info      | The level of logging statements emitted. One of: debug, info, warn, error |
+| CORS_ALLOW_ORIGIN | \*        | Value for the Access-Control-Allow-Origin header in API responses         |
 
 ## Usage
 

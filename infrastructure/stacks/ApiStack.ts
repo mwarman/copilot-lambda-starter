@@ -7,8 +7,13 @@ import * as dynamodb from 'aws-cdk-lib/aws-dynamodb';
 import * as logs from 'aws-cdk-lib/aws-logs';
 import * as path from 'path';
 
+// Define custom stack props interface to include CORS configuration
+export interface ApiStackProps extends cdk.StackProps {
+  corsAllowOrigin?: string;
+}
+
 export class ApiStack extends cdk.Stack {
-  constructor(scope: Construct, id: string, props?: cdk.StackProps) {
+  constructor(scope: Construct, id: string, props?: ApiStackProps) {
     super(scope, id, props);
 
     // Create DynamoDB table for tasks
@@ -31,6 +36,7 @@ export class ApiStack extends cdk.Stack {
       handler: 'createTask',
       environment: {
         TASKS_TABLE: tasksTable.tableName,
+        CORS_ALLOW_ORIGIN: props?.corsAllowOrigin || '*',
       },
       bundling: {
         minify: true,
@@ -54,6 +60,7 @@ export class ApiStack extends cdk.Stack {
       handler: 'listTasks',
       environment: {
         TASKS_TABLE: tasksTable.tableName,
+        CORS_ALLOW_ORIGIN: props?.corsAllowOrigin || '*',
       },
       bundling: {
         minify: true,
@@ -77,6 +84,7 @@ export class ApiStack extends cdk.Stack {
       handler: 'getTask',
       environment: {
         TASKS_TABLE: tasksTable.tableName,
+        CORS_ALLOW_ORIGIN: props?.corsAllowOrigin || '*',
       },
       bundling: {
         minify: true,
@@ -100,6 +108,7 @@ export class ApiStack extends cdk.Stack {
       handler: 'updateTask',
       environment: {
         TASKS_TABLE: tasksTable.tableName,
+        CORS_ALLOW_ORIGIN: props?.corsAllowOrigin || '*',
       },
       bundling: {
         minify: true,
@@ -123,6 +132,7 @@ export class ApiStack extends cdk.Stack {
       handler: 'deleteTask',
       environment: {
         TASKS_TABLE: tasksTable.tableName,
+        CORS_ALLOW_ORIGIN: props?.corsAllowOrigin || '*',
       },
       bundling: {
         minify: true,

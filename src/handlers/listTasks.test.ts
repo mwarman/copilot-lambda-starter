@@ -2,6 +2,13 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { APIGatewayProxyEvent } from 'aws-lambda';
 import { listTasks } from './listTasks';
 
+// Mock the config and logger
+vi.mock('../utils/config.js', () => ({
+  config: {
+    TASKS_TABLE: 'mock-tasks-table',
+  },
+}));
+
 // Mock dependencies
 vi.mock('../services/taskService.js', () => ({
   TaskService: {
