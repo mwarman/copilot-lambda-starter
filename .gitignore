@@ -17,5 +17,5 @@ build
 dist
 
 # AWS CDK
-cdk.output
+cdk.out
 .cdk.staging
