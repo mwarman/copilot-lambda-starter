@@ -168,6 +168,42 @@ export class ApiStack extends cdk.Stack {
     // Add a GET method to list all tasks
     tasksResource.addMethod('GET', new apigateway.LambdaIntegration(listTasksFunction));
 
+    // Add OPTIONS method to support CORS preflight requests for the /tasks resource
+    tasksResource.addMethod(
+      'OPTIONS',
+      new apigateway.MockIntegration({
+        integrationResponses: [
+          {
+            statusCode: '200',
+            responseParameters: {
+              'method.response.header.Access-Control-Allow-Headers':
+                "'Content-Type,X-Amz-Date,Authorization,X-Api-Key'",
+              'method.response.header.Access-Control-Allow-Methods': "'GET,POST,PUT,DELETE,OPTIONS'",
+              'method.response.header.Access-Control-Allow-Origin': `'${props?.corsAllowOrigin || '*'}'`,
+              'method.response.header.Access-Control-Allow-Credentials': "'true'",
+            },
+          },
+        ],
+        passthroughBehavior: apigateway.PassthroughBehavior.WHEN_NO_MATCH,
+        requestTemplates: {
+          'application/json': '{"statusCode": 200}',
+        },
+      }),
+      {
+        methodResponses: [
+          {
+            statusCode: '200',
+            responseParameters: {
+              'method.response.header.Access-Control-Allow-Headers': true,
+              'method.response.header.Access-Control-Allow-Methods': true,
+              'method.response.header.Access-Control-Allow-Origin': true,
+              'method.response.header.Access-Control-Allow-Credentials': true,
+            },
+          },
+        ],
+      },
+    );
+
     // Create a task resource
     const taskResource = tasksResource.addResource('{taskId}');
 
@@ -179,6 +215,42 @@ export class ApiStack extends cdk.Stack {
 
     // Add a DELETE method to delete a task by ID
     taskResource.addMethod('DELETE', new apigateway.LambdaIntegration(deleteTaskFunction));
+
+    // Add OPTIONS method to support CORS preflight requests for the /tasks/{taskId} resource
+    taskResource.addMethod(
+      'OPTIONS',
+      new apigateway.MockIntegration({
+        integrationResponses: [
+          {
+            statusCode: '200',
+            responseParameters: {
+              'method.response.header.Access-Control-Allow-Headers':
+                "'Content-Type,X-Amz-Date,Authorization,X-Api-Key'",
+              'method.response.header.Access-Control-Allow-Methods': "'GET,POST,PUT,DELETE,OPTIONS'",
+              'method.response.header.Access-Control-Allow-Origin': `'${props?.corsAllowOrigin || '*'}'`,
+              'method.response.header.Access-Control-Allow-Credentials': "'true'",
+            },
+          },
+        ],
+        passthroughBehavior: apigateway.PassthroughBehavior.WHEN_NO_MATCH,
+        requestTemplates: {
+          'application/json': '{"statusCode": 200}',
+        },
+      }),
+      {
+        methodResponses: [
+          {
+            statusCode: '200',
+            responseParameters: {
+              'method.response.header.Access-Control-Allow-Headers': true,
+              'method.response.header.Access-Control-Allow-Methods': true,
+              'method.response.header.Access-Control-Allow-Origin': true,
+              'method.response.header.Access-Control-Allow-Credentials': true,
+            },
+          },
+        ],
+      },
+    );
 
     // Output the API URL
     new cdk.CfnOutput(this, 'ApiUrl', {
