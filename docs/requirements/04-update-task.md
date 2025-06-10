@@ -27,6 +27,6 @@ The request body to update an existing task, the **UpdateTaskRequest**, should i
 - **title:** The task title. String. Optional. Maximum of 100 characters.
 - **detail:** Additional information for the task. String. Optional. Maximum of 2000 characters.
 - **isComplete:** Indicates if the task is complete. Boolean. Optional.
-- **dueAt:** The task due date. String. Optional. Use ISO-8601 date format, YYYY-MM-DD.
+- **dueAt:** The task due date. String. Optional. Use ISO-8601 date format, e.g. 2025-06-01T04:00:00Z
 
 The update operation should only modify the attributes that are provided in the request. Attributes not included in the request should remain unchanged.

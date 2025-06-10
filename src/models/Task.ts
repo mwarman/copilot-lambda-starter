@@ -15,7 +15,7 @@ export const TaskSchema = z.object({
   title: z.string().min(1, 'Title is required').max(100, 'Title must be 100 characters or less'),
   detail: z.string().max(2000, 'Detail must be 2000 characters or less').optional(),
   isComplete: z.boolean().default(false),
-  dueAt: z.string().date().optional(),
+  dueAt: z.string().datetime('Due date must be a valid ISO-8601 date string').optional(),
 });
 
 /**
@@ -43,7 +43,7 @@ export const UpdateTaskSchema = z.object({
   title: z.string().max(100, 'Title must be 100 characters or less').optional(),
   detail: z.string().max(2000, 'Detail must be 2000 characters or less').optional(),
   isComplete: z.boolean().optional(),
-  dueAt: z.string().date().optional(),
+  dueAt: z.string().datetime('Due date must be a valid ISO-8601 date string').optional(),
 });
 
 // Type definitions derived from the schemas
