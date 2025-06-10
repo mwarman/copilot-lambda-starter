@@ -96,7 +96,7 @@ describe('createTask handler', () => {
       const validTaskData: CreateTaskRequest = {
         title: 'Test Task',
         detail: 'This is a test task',
-        dueAt: '2025-06-30',
+        dueAt: '2025-06-30T12:00:00Z', // Example due date
       };
       const mockEvent = createMockEvent(JSON.stringify(validTaskData));
 
