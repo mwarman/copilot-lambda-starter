@@ -32,10 +32,107 @@ You are a **Senior TypeScript developer** working on an AWS Lambda REST API proj
 
 ---
 
-## Coding Guidelines
+## Technology Stack
 
-- Use **TypeScript** for all source and infrastructure code.
-- Write **async Lambda handlers** using `APIGatewayProxyEvent` and return:
+### Primary Technologies
+
+- **Language:** TypeScript
+- **AWS SDK** v3 for modular imports
+- **AWS Lambda** for serverless compute
+- **API Gateway** for REST API endpoints
+- **DynamoDB** for data storage
+- **Cognito** for user authentication and authorization
+- **Zod** for input validation and schema definitions
+
+### Utilities
+
+- **Lodash** for utility functions
+- **date-fns** for date manipulation
+- **uuid** for generating unique identifiers
+
+### Testing
+
+- **Vitest** for unit testing
+- **Vitest V8** for code coverage
+
+### Development Tools
+
+- **ESLint** for linting TypeScript code
+- **Prettier** for code formatting
+- **npm** for package management
+- **nvm** for Node.js version management
+- **rimraf** for cleaning build artifacts
+
+### Infrastructure
+
+- **AWS CDK** for defining cloud infrastructure as code
+- **GitHub Actions** for CI/CD workflows
+
+---
+
+## Project Structure
+
+```
+/src
+  /handlers
+    getTasks.ts                    # Lambda handler
+    getTasks.test.ts               # Unit test for getTasks
+  /services
+    tasksService.ts                # Business logic
+    tasksService.test.ts           # Unit test for tasksService
+  /models
+    task.ts                        # TypeScript interfaces for the task domain
+  /utils
+    awsClients.ts                  # AWS SDK clients (DynamoDB, S3, etc.)
+    awsClients.test.ts             # Unit test for AWS clients
+    config.ts                      # Configuration utility (reads and validates from process.env)
+    config.test.ts                 # Unit test for config utility
+    logger.ts                      # Logger utility
+    logger.test.ts                 # Unit test for logger utility
+    response.ts                    # Helper for formatting Lambda responses
+    response.test.ts               # Unit test for response utility
+
+/infrastructure
+  /stacks
+    dynamoStack.ts                 # AWS CDK stack for DynamoDB tables
+    cognitoStack.ts                # AWS CDK stack for Cognito user pool
+    apiStack.ts                    # AWS CDK stack for API Gateway + Lambdas
+  .env                             # Environment variables for AWS CDK (do not commit)
+  .env.example                     # Example AWS CDK environment variables file
+  app.ts                           # AWS CDK app entry point
+  cdk.json                         # AWS CDK configuration
+  tsconfig.json                    # TypeScript configuration for AWS CDK
+  package.json                     # Dependencies and scripts for AWS CDK infrastructure
+
+.editorconfig                      # Editor configuration for consistent formatting
+.env                               # Environment variables for app local development (do not commit)
+.env.example                       # Example app environment variables file
+.nvmrc                             # Node.js version management file
+.prettierrc                        # Prettier configuration
+eslint.config.mjs                  # ESLint configuration
+package.json                       # Dependencies and scripts for the app
+tsconfig.json                      # TypeScript config for the app
+vitest.config.ts                   # Vitest config
+```
+
+---
+
+## Development Guidelines
+
+### General Guidelines
+
+- Use **TypeScript** for all app and infrastructure source code.
+- Organize imports logically: external libraries first, then internal components.
+- Use path aliases for cleaner imports (e.g., `@services/scoreboardsService`).
+- Do not use barrel files (index.ts).
+- Use comments to explain complex logic, but avoid obvious comments.
+- Reuse models and utilities across layers.
+- Use **Zod** for input validation and schema definitions.
+
+### Lambda Handler Guidelines
+
+- Handlers should **only parse input, call services, and return responses**.
+- Use **async Lambda handlers** using `APIGatewayProxyEvent` and return:
 
   ```ts
   {
@@ -50,68 +147,16 @@ You are a **Senior TypeScript developer** working on an AWS Lambda REST API proj
   - `event.pathParameters` or `event.queryStringParameters` for GET/DELETE
 
 - Validate input using **Zod** schemas.
-- Use `process.env` for all configuration (not hardcoded values).
+- Use `process.env` for all configuration (not hardcoded values) and `config.ts` for centralized configuration management.
 
----
-
-## Project Structure with Co-located Tests
-
-```
-/src
-  /handlers
-    getTask.ts              # Lambda handler
-    getTask.test.ts         # Unit test for getTask
-  /services
-    taskService.ts          # Business logic
-    taskService.test.ts     # Unit test for taskService
-  /models
-    Task.ts
-  /utils
-    response.ts             # Helper for formatting Lambda responses
-    response.test.ts
-
-/infrastructure
-  /stacks
-    ApiStack.ts             # CDK stack for REST API + Lambdas
-  app.ts                    # CDK app entry point
-
-cdk.json                    # CDK config
-tsconfig.json               # TypeScript config
-vitest.config.ts            # Vitest config
-```
-
----
-
-## AWS CDK Guidelines
-
-- Use **NodejsFunction** from `aws-cdk/aws-lambda-nodejs` to build Lambdas with automatic TypeScript transpilation.
-- Define one CDK stack per major grouping of resources (e.g., API stack, database stack).
-- Example: Basic Lambda + API Gateway route:
+#### Handler Example
 
 ```ts
-const getTaskFunction = new NodejsFunction(this, 'GetTaskFunction', {
-  entry: '../src/handlers/getTask.ts',
-  handler: 'getTask',
-  environment: {
-    TASKS_TABLE: tasksTable.tableName,
-  },
-});
+import { APIGatewayProxyEvent, APIGatewayProxyResult } from 'aws-lambda';
+import { z } from 'zod';
+import { TaskService } from '@/services/taskService';
+import { ok, notFound, badRequest, internalServerError } from '@/utils/response';
 
-const api = new RestApi(this, 'TasksApi');
-api.root.addResource('tasks').addResource('{taskId}').addMethod('GET', new LambdaIntegration(getTaskFunction));
-```
-
----
-
-## Code Organization Rules
-
-- Handlers should **only parse input, call services, and return responses**.
-- Place core business logic and integrations in `/services`.
-- Reuse models and utilities across layers.
-
-### Handler Format Example
-
-```ts
 // Zod schema for request validation
 const requestSchema = z.object({
   pathParameters: z.object({
@@ -141,83 +186,120 @@ export const getTask = async (event: APIGatewayProxyEvent): Promise<APIGatewayPr
 };
 ```
 
-### Service Format Example
+### Service Layer Guidelines
+
+- Place all business logic in `/services`.
+- Use **async functions** that return promises.
+
+#### Example Service
 
 ```ts
-import { PutCommand } from '@aws-sdk/lib-dynamodb';
-import { v4 as uuidv4 } from 'uuid';
-import { Task, CreateTaskRequest } from '@/models/Task.js';
-import { dynamoDocClient } from '@/utils/awsClients.js';
-import { logger } from '@/utils/logger.js';
-import { config } from '@/utils/config.js';
+import { GetCommand } from '@aws-sdk/lib-dynamodb';
 
-// Service function to create a new task
-const createTask = async (createTaskRequest: CreateTaskRequest): Promise<Task> => {
-  // Generate a new ID
-  const taskId = uuidv4();
+import { config } from '@/utils/config';
+import { dynamoDocClient } from '@/utils/awsClients';
+import { Task } from '@/models/task';
 
-  // Create the complete task object
-  const task: Task = {
-    id: taskId,
-    title: createTaskRequest.title,
-    detail: createTaskRequest.detail,
-    isComplete: createTaskRequest.isComplete ?? false,
-    dueAt: createTaskRequest.dueAt,
-  };
-
-  // Log the task creation
-  logger.info(`Creating task with ID: ${taskId}`, { task });
-
-  // Save to DynamoDB
-  await dynamoDocClient.send(
-    new PutCommand({
+// Service function to fetch a task by ID
+const getTaskById = async (taskId: string): Promise<Task | null> => {
+  // Validate input
+  if (!taskId) {
+    throw new Error('taskId is required');
+  }
+  // Fetch task from DynamoDB
+  const result = await dynamoDocClient.send(
+    new GetCommand({
       TableName: config.TASKS_TABLE,
-      Item: task,
+      Key: { id: taskId },
     }),
   );
-
-  return task;
+  if (!result.Item) {
+    return null;
+  }
+  return result.Item as Task;
 };
 
-// Define and export the TaskService with the methods to handle task operations
-export const TaskService = {
-  createTask,
+export const TasksService = {
+  getTaskById,
+  // Other service methods...
 };
 ```
 
 ---
 
-## Co-located Testing Guidelines
+## Testing Guidelines
 
 - Use **Vitest**.
-- Place test files next to the source file, with `.test.ts` suffix.
-- Use `describe` and `it` blocks for organization.
-- Mock dependencies using `vi.mock` or similar.
-- Use `beforeEach` for setup and `afterEach` for cleanup.
-- Use `expect` assertions for results.
+- Co-locate test files next to the source file, with `.test.ts` suffix.
 - Use Arrange - Act - Assert (AAA) pattern for test structure:
   - **Arrange:** Set up the test environment and inputs.
   - **Act:** Call the function being tested.
   - **Assert:** Verify the output and side effects.
+- Use `describe` and `it` blocks for organization.
+- Use `beforeEach` for setup and `afterEach` for cleanup.
+- Use `expect` assertions for results.
+- Mock dependencies using `vi.mock` or similar.
 - Mock external calls (e.g., AWS SDK, databases).
 - Prefer unit tests over integration tests in this repo.
+- 80% code coverage is the minimum requirement for all components and features.
 
 ### Example Test File (`getTask.test.ts`)
 
 ```ts
-import { getTask } from './getTask';
-import { APIGatewayProxyEvent } from 'aws-lambda';
+describe('getTask', () => {
+  it('returns 200 with task data when task exists', async () => {
+    // Arrange
+    const event = {
+      pathParameters: { taskId: '123' },
+    } as unknown as APIGatewayProxyEvent;
 
-it('returns 400 if taskId is missing', async () => {
-  // Arrange
-  const event = { pathParameters: {} } as unknown as APIGatewayProxyEvent;
+    // Mock the service call
+    vi.spyOn(TasksService, 'getTaskById').mockResolvedValue({
+      id: '123',
+      name: 'Test Task',
+      // Other properties...
+    });
 
-  // Act
-  const response = await getTask(event);
+    // Act
+    const response = await getTask(event);
 
-  // Assert
-  expect(response.statusCode).toBe(400);
+    // Assert
+    expect(response.statusCode).toBe(200);
+    expect(JSON.parse(response.body)).toEqual({
+      id: '123',
+      name: 'Test Task',
+      // Other properties...
+    });
+  });
 });
+```
+
+---
+
+## AWS CDK Guidelines
+
+- Self-contained infrastructure code in the `infrastructure` directory.
+- Define one CDK stack per major grouping of resources (e.g., API stack, database stack).
+- Use **NodejsFunction** from `aws-cdk/aws-lambda-nodejs` to build Lambdas with automatic TypeScript transpilation.
+- Enable CORS for all methods in API Gateway.
+- Use `/infrastructure/.env` for environment variables prefixed with `CDK_`, but avoid committing this file.
+- Use Zod for schema validation of configuration values.
+- Tag all CDK resources appropriately (`App`, `Env`, `OU`, `Owner`).
+- Deploy separate environments (dev/qa/prd) using configuration values.
+
+### Example Lambda + API Gateway route
+
+```ts
+const getTaskFunction = new NodejsFunction(this, 'GetTaskFunction', {
+  entry: '../src/handlers/getTask.ts',
+  handler: 'getTask',
+  environment: {
+    TASKS_TABLE: tasksTable.tableName,
+  },
+});
+
+const api = new RestApi(this, 'TasksApi');
+api.root.addResource('tasks').addResource('{taskId}').addMethod('GET', new LambdaIntegration(getTaskFunction));
 ```
 
 ---
@@ -225,23 +307,4 @@ it('returns 400 if taskId is missing', async () => {
 ## Best Practices
 
 - Never commit secrets or hardcoded credentials.
-- Use **SSM Parameter Store** for secure configuration.
-- Tag all CDK resources appropriately (`App`, `Env`, `OU`, `Owner`).
-- Deploy separate environments (dev/qa/prod) using CDK context or stacks.
-
----
-
-## Example Inline Copilot Comment Prompt
-
-```ts
-/**
- * Lambda Handler: getTask
- *
- * Copilot Instructions:
- * - Parse taskId from event.pathParameters
- * - Call taskService.getTaskById(taskId)
- * - Return 200 with task object or 404 if not found
- * - Validate input; return 400 if invalid
- * - Catch unexpected errors; log and return 500
- */
-```
+- Use single table design for DynamoDB where possible.
