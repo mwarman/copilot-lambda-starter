@@ -123,7 +123,7 @@ vitest.config.ts                   # Vitest config
 
 - Use **TypeScript** for all app and infrastructure source code.
 - Organize imports logically: external libraries first, then internal components.
-- Use path aliases for cleaner imports (e.g., `@services/scoreboardsService`).
+- Use path aliases for cleaner imports (e.g., `@services/taskService`).
 - Do not use barrel files (index.ts).
 - Use comments to explain complex logic, but avoid obvious comments.
 - Reuse models and utilities across layers.
