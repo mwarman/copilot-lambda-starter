@@ -46,6 +46,12 @@ README.md                   # This document
 
 ## How to use
 
+### Fork the Repository
+
+To get started, you should [fork this repository](https://github.com/mwarman/copilot-lambda-starter/fork) on GitHub or copy it to your local machine. This allows you to make changes, track your progress, and customize the project to fit your needs. If you are new to GitHub, you can use the 'Fork' button at the top right of the repository page to create your own copy.
+
+> 📢 Please do not push commits to this repository. This repository is for teaching purposes only.
+
 ### Update the instructions
 
 Add a section to the [Copilot Instructions](./.github/copilot-instructions.md) document immediately following the **Role** section. Provide an overview of the project like this:
@@ -69,6 +75,8 @@ Begin working with Copilot to create the application. Copilot works best when it
 
 When you implement the second and subsequent stories, Copilot will use the existing code as a reference and pattern the code that the agent creates to match.
 
+> 💡 The "Claude Sonnet 3.7" model has been used to develop this project. Language models evolve quickly and new versions published frequently. Review the official documentation and select the [language model that is most appropriate for your application or task](https://docs.github.com/en/copilot/using-github-copilot/ai-models/choosing-the-right-ai-model-for-your-task).
+
 #### Requirements
 
 The requirements are located in the [`docs/requirements`](docs/requirements/) directory. Open Copilot chat in VS Code and place it into **Ask** mode if it is not already.
@@ -79,6 +87,12 @@ Drag the [01-create-task.md](docs/requirements/01-create-task.md) requirements s
 
 ```
 let's update the project with these requirements.
+```
+
+OR
+
+```
+let's create a step-by-step plan to implement these requirements in the project.
 ```
 
 or you can use the `#file` command to explicitly reference the requirements like this:
